@@ -59,17 +59,20 @@ public struct JoinMessage : INetSerializable
 {
     public string name;
     public int pen;
+    public int userId;
 
     public void Deserialize(NetDataReader reader)
     {
         pen = reader.GetInt();
         name = reader.GetString();
+        userId = reader.GetInt();
     }
 
     public void Serialize(NetDataWriter writer)
     {
         writer.Put(pen);
         writer.Put(name);
+        writer.Put(userId);
     }
 
     public JoinMessageShowInfo GetInfo()

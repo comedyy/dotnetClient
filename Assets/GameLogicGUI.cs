@@ -6,31 +6,37 @@ using UnityEngine;
 
 public class GameLogicGUI : MonoBehaviour
 {
-    public string UserName = "defaultName";
-    public int pen = 1;
+    int _userId;
+    string UserName = "defaultName";
+    int pen = 1;
 
     LocalFrameNetGame _netGame;
     int _currentValue = 0;
     public static List<MessageItem> _lstTemp = new List<MessageItem>();
     int _gameFrame = 0;
     int[] _penValue;
+    ClientBattleRoomMgr _clientBattleRoomMgr;
+    int GetXOffset => _userId == 1 ? 0 : 600;
 
     void Start()
     {
-        ClientBattleRoomMgr.Instance().OnBattleStart += OnBattleStart;
     }
 
     private void OnBattleStart(BattleStartMessage message, IClientGameSocket socket)
     {
-        _netGame = new LocalFrameNetGame(0.5f, socket, 0, message, false);
+        var index = Array.FindIndex(message.joins, m=>m.userId == _userId);
+        _netGame = new LocalFrameNetGame(0.5f, socket, index, message, false);
         _currentValue = message.initNum;
         _penValue = message.joins.Select(m=>m.pen).ToArray();
 
         _netGame.SendReady(1);
     }
 
-    internal void Init(RoomGUI roomGUI, int v)
+    internal void Init(RoomGUI roomGUI, int userId, ClientBattleRoomMgr clientBattleRoomMgr)
     {
+        _userId = userId;
+        _clientBattleRoomMgr = clientBattleRoomMgr;
+        clientBattleRoomMgr.OnBattleStart += OnBattleStart;
         roomGUI.GetJoinMessage = GetJoinMessage;
         roomGUI.GetStartMessage = GetStartMessage;
     }
@@ -42,29 +48,29 @@ public class GameLogicGUI : MonoBehaviour
 
     private (JoinMessage, JoinMessageShowInfo) GetJoinMessage()
     {
-        var join = new JoinMessage(){ pen = pen, name = UserName};
+        var join = new JoinMessage(){ pen = pen, name = UserName, userId = _userId};
         return (join, join.GetInfo());
     }
 
     void OnGUI()
     {
-        if(ClientBattleRoomMgr.Instance()._roomState == TeamRoomState.InSearchRoom)
+        if(_clientBattleRoomMgr._roomState == TeamRoomState.InSearchRoom)
         {
-            UserName = GUI.TextField(new Rect(0, 0, 100, 100), UserName);
-            pen = int.Parse(GUI.TextField(new Rect(100, 0, 100, 100), pen.ToString()));
+            UserName = GUI.TextField(new Rect(GetXOffset+ 0, 0, 100, 100), UserName);
+            pen = int.Parse(GUI.TextField(new Rect(GetXOffset+ 100, 0, 100, 100), pen.ToString()));
         }
-        else if(ClientBattleRoomMgr.Instance()._roomState == TeamRoomState.InBattle)
+        else if(_clientBattleRoomMgr._roomState == TeamRoomState.InBattle)
         {
-            if(GUI.Button(new Rect(0, 0, 100, 100), "add"))
+            if(GUI.Button(new Rect(GetXOffset+ 0, 0, 100, 100), "add"))
             {
                 _netGame.SendOpt(0);
             }
-            if(GUI.Button(new Rect(100, 0, 100, 100), "remove"))
+            if(GUI.Button(new Rect(GetXOffset+ 100, 0, 100, 100), "remove"))
             {
                 _netGame.SendOpt(1);
             }
 
-            GUI.Label(new Rect(200, 0, 100, 100), _currentValue.ToString());
+            GUI.Label(new Rect(GetXOffset+ 200, 0, 100, 100), _currentValue.ToString());
             
             while(_gameFrame < _netGame.ReceivedServerFrame)
             {
@@ -81,6 +87,7 @@ public class GameLogicGUI : MonoBehaviour
     {
         foreach(var x in lstTemp)
         {
+            Debug.LogError(x.id);
             if(x.opt == 0)
             {
                 _currentValue += _penValue[x.id];

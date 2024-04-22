@@ -27,7 +27,7 @@ public class GameClientSocket : IClientGameSocket, INetEventListener, INetLogger
     public int RoundTripTime => _netClient.FirstPeer == null ? -1 : _netClient.FirstPeer.RoundTripTime;
 
     string _targetIp = null;
-    int _debugLatency = 0;
+    Action<string> _logCallback;
     IPEndPoint _endPoint;
 
     public void SetIp(string ip, int port)
@@ -39,8 +39,9 @@ public class GameClientSocket : IClientGameSocket, INetEventListener, INetLogger
         }
     }
 
-    public GameClientSocket(string targetIp, int port, int delay)
+    public GameClientSocket(string targetIp, int port, int delay, Action<string> logCallback)
     {
+        _logCallback = logCallback;
         NetDebug.Logger = this;
         
         if(string.IsNullOrEmpty(targetIp))
@@ -48,7 +49,6 @@ public class GameClientSocket : IClientGameSocket, INetEventListener, INetLogger
             throw new Exception("targetip 为空");
         }
 
-        _debugLatency = delay;
         SetIp(targetIp, port);
 
         Debug.LogError(targetIp + " " + port);
@@ -79,7 +79,7 @@ public class GameClientSocket : IClientGameSocket, INetEventListener, INetLogger
         _dataWriter.Put(RoomMsgVersion.version);
         _netClient.Connect(_endPoint, _dataWriter);
 
-        ClientBattleRoomMgr.Instance().LogMessage("connect " + _endPoint);
+        _logCallback("connect " + _endPoint);
     }
 
     public void DisConnect()
@@ -142,7 +142,6 @@ public class GameClientSocket : IClientGameSocket, INetEventListener, INetLogger
     {
         _dataWriter.Reset();
         _dataWriter.Put(t);
-        Debug.LogError("send");
         _netClient.SendUnconnectedMessage(_dataWriter, _endPoint);
     }
 #endregion
@@ -184,7 +183,7 @@ public class GameClientSocket : IClientGameSocket, INetEventListener, INetLogger
 
     public void OnPeerDisconnected(NetPeer peer, DisconnectInfo disconnectInfo)
     {
-        ClientBattleRoomMgr.Instance().LogMessage("[CLIENT] We disconnected because " + disconnectInfo.Reason);
+        _logCallback("[CLIENT] We disconnected because " + disconnectInfo.Reason);
         connectResult = ConnectResult.Disconnect;
         OnDisConnected?.Invoke();
     }

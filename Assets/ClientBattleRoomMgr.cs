@@ -35,16 +35,14 @@ public class ClientBattleRoomMgr : MonoBehaviour
         }
     }
     public HashSet<int> _offListUsers = new HashSet<int>();
-    static ClientBattleRoomMgr _instance = null;
     
     public RoomUser[] _userList;
     public UpdateRoomMemberList _updateRoomInfo;
     public bool IsLastBattleQuitMember{get; private set;}
-    RoomInfoMsg[] _roomMsgList;
+    public RoomInfoMsg[] _roomMsgList;
     public List<RoomInfoMsg> _canShowList = new List<RoomInfoMsg>();
     Dictionary<int, UpdateRoomMemberList> _dicRoomInfo = new Dictionary<int, UpdateRoomMemberList>();
     public int enterRoomId{get; private set;}
-    HashSet<int> _allRequiredMsg = new HashSet<int>();
     public TeamRoomState _roomState {get; private set;}= TeamRoomState.InSearchRoom;
     public GetUserStateMsg.UserState ServerUserState{get; private set;} = GetUserStateMsg.UserState.None;
     public string _battleGUID = "";
@@ -65,15 +63,11 @@ public class ClientBattleRoomMgr : MonoBehaviour
     public event Action<int> OnUserQuit;
     public event Action<BattleStartMessage, IClientGameSocket> OnBattleStart;
 
-    public static ClientBattleRoomMgr Instance()
+    public static ClientBattleRoomMgr CreateInstance()
     {
-        if(_instance == null)
-        {
-            _instance = new GameObject().AddComponent<ClientBattleRoomMgr>();
-            _instance.Init();
-        }
-
-        return _instance;
+        var  instance = new GameObject().AddComponent<ClientBattleRoomMgr>();
+        instance.Init();
+        return instance;
     }
 
     public void Init()
@@ -81,7 +75,7 @@ public class ClientBattleRoomMgr : MonoBehaviour
         // var ip = "101.132.100.216";
         var ip = "127.0.0.1";
         var port = 10055;
-        _socket = new GameClientSocket(ip, port, 0);
+        _socket = new GameClientSocket(ip, port, 0, LogMessage);
         _socket.OnConnected = OnConnected;
         _socket.OnDisConnected = OnDisConnected;
         _socket.OnReceiveMsg += OnReceiveMessage;
@@ -127,9 +121,18 @@ public class ClientBattleRoomMgr : MonoBehaviour
             return;
         }
 
-        LogMessage("<<<<<<<<<<<===== " + msgType);
+        LogMessage(UserId + "<<<<<<<<<<<===== " + msgType);
 
-       if(msgType == MsgType1.SyncRoomMemberList)
+        if(msgType == MsgType1.GetAllRoomList)
+        {
+            _roomMsgList = reader.Get<RoomListMsg>().roomList;
+            foreach(var x in _roomMsgList)
+            {
+                _dicRoomInfo[x.updateRoomMemberList.roomId] = x.updateRoomMemberList;
+            }
+            OnQueryRoomList?.Invoke();
+        }
+        else if(msgType == MsgType1.SyncRoomMemberList)
         {
             var msg = reader.Get<UpdateRoomMemberList>();
             _userList = msg.userList;
@@ -331,31 +334,9 @@ public class ClientBattleRoomMgr : MonoBehaviour
     }
 
 
-    public async Task<RoomInfoMsg[]> QueryRoomListAsync()
+    public void QueryRoomListAsync()
     {
         _socket.SendUnConnectedMessage(new RoomListMsgRequest());
-        var sendTime = Time.time;
-        var intSendTime = Time.time;
-        _allRequiredMsg.Add((int)MsgType1.GetAllRoomList);
-
-        while(true)
-        {
-            await Task.Delay(500);
-
-            if(!_allRequiredMsg.Contains((int)MsgType1.GetAllRoomList))
-            {
-                return _roomMsgList;
-            }
-            else if(Time.time - sendTime > 3)
-            {
-                _socket.SendUnConnectedMessage(new RoomListMsgRequest());
-                sendTime = Time.time;
-            }
-            else if(Time.time - intSendTime > 10)
-            {
-                return default;
-            }
-        }
     }
     
     public async Task<TeamRoomEnterFailedReason> JoinRoom(int enterRoomId, byte[] joinBytes, byte[] joinShowInfo)

@@ -20,56 +20,39 @@ public class RoomGUI : MonoBehaviour
         DontDestroyOnLoad(gameObject);
     }
 
-    RoomInfoMsg[] roomList;
-    public RoomUser[] _userList => ClientBattleRoomMgr.Instance()._userList;
-    bool _canQuery = true;
+    public int userId;
+    RoomInfoMsg[] roomList => _clientBattleRoomMgr._roomMsgList;
+    ClientBattleRoomMgr _clientBattleRoomMgr;
+    public RoomUser[] _userList => _clientBattleRoomMgr._userList;
 
     public Func<(BattleStartMessage, BattleStartShowInfo)> GetStartMessage;
     public Func<(JoinMessage, JoinMessageShowInfo)> GetJoinMessage;
-    int userId 
-    {
-        get
-        {
-            var y = PlayerPrefs.GetInt(Application.dataPath +"netPlayerId");
-            if(y == 0)
-            {
-                y = UnityEngine.Random.Range(1000, 10000000);
-                PlayerPrefs.SetInt(Application.dataPath + "netPlayerId", y);
-            }
-            return y;
-        }
-    }
+    
 
     void Start()
     {
+        _clientBattleRoomMgr = ClientBattleRoomMgr.CreateInstance();
         var mono = gameObject.AddComponent<LocalServerMono>();
-        // if(AutoCreateLocalServer)
-        // {
-        //     mono.StartServer();
-        //     ip = "127.0.0.1";
-        // }
-
-
-        gameObject.AddComponent<GameLogicGUI>().Init(this, userId);
-        ClientBattleRoomMgr.Instance().SetUserId(userId);
-        ClientBattleRoomMgr.Instance().enableLog = true;
+        gameObject.AddComponent<GameLogicGUI>().Init(this, userId, _clientBattleRoomMgr);
+        _clientBattleRoomMgr.SetUserId(userId);
+        _clientBattleRoomMgr.enableLog = true;
     }
 
 
     public static string ip;
     public static int port;
-    string _ipMac;
+    int GetXOffset => userId == 1 ? 0 : 600;
     void OnGUI()
     {
-        if(ClientBattleRoomMgr.Instance()._roomState == TeamRoomState.InSearchRoom)
+        if(_clientBattleRoomMgr._roomState == TeamRoomState.InSearchRoom)
         {
             DrawOutsideRoom();
         }
-        else if(ClientBattleRoomMgr.Instance()._roomState == TeamRoomState.InRoom)
+        else if(_clientBattleRoomMgr._roomState == TeamRoomState.InRoom)
         {
             DrawInsideRoom();
         }
-        else if(ClientBattleRoomMgr.Instance()._roomState == TeamRoomState.InBattle)
+        else if(_clientBattleRoomMgr._roomState == TeamRoomState.InBattle)
         {
             // if(LocalFrame.Instance != null && LocalFrame.Instance._clientStageIndex < 1)
             // {
@@ -77,21 +60,21 @@ public class RoomGUI : MonoBehaviour
             //     for(int i = 0; i < _userList.Length; i++)
             //     {
             //         int widthIndex = 0;
-            //         GUI.Label(new Rect((widthIndex++) * 100, i * 50 + 400, 100, 50), _userList[i].name);
-            //         GUI.Label(new Rect((widthIndex++) * 100, i * 50 + 400, 100, 50), $"{_userList[i].HeroId};{_userList[i].heroLevel};{_userList[i].heroStar}");
+            //         GUI.Label(new Rect(GetXOffset + (widthIndex++) * 100, i * 50 + 400, 100, 50), _userList[i].name);
+            //         GUI.Label(new Rect(GetXOffset + (widthIndex++) * 100, i * 50 + 400, 100, 50), $"{_userList[i].HeroId};{_userList[i].heroLevel};{_userList[i].heroStar}");
 
-            //         ClientBattleRoomMgr.Instance()._dicLoadingProcess.TryGetValue((int)_userList[i].userId, out var process);
-            //         GUI.Label(new Rect((widthIndex++) * 100, i * 50 + 400, 100, 50), $"process:{process}");
+            //         _clientBattleRoomMgr._dicLoadingProcess.TryGetValue((int)_userList[i].userId, out var process);
+            //         GUI.Label(new Rect(GetXOffset + (widthIndex++) * 100, i * 50 + 400, 100, 50), $"process:{process}");
             //     }
             // }
             // else if(LocalFrame.Instance != null && LocalFrame.Instance is LocalFrameNetGame netPing)
             // {
-            //     GUI.Label(new Rect(Screen.width - 300, 0, 100, 50), $"ping:{netPing.SocketRoundTripTime}");
+            //     GUI.Label(new Rect(GetXOffset + Screen.width - 300, 0, 100, 50), $"ping:{netPing.SocketRoundTripTime}");
 
             //     var logicPing = netPing.SocketRoundTripLogicTime;
             //     var processPerSec = netPing.FrameProcessPerSec;
             //     var receivePerSec = netPing.ReceiveFramePerSec;
-            //     GUI.Label(new Rect(Screen.width - 200, 0, 200, 50), $"L:{logicPing} P:{processPerSec} R:{receivePerSec}");
+            //     GUI.Label(new Rect(GetXOffset + Screen.width - 200, 0, 200, 50), $"L:{logicPing} P:{processPerSec} R:{receivePerSec}");
             // }
         }
         
@@ -107,14 +90,14 @@ public class RoomGUI : MonoBehaviour
             var roomCount = roomList.Length;
             if(roomCount == 0)
             {
-                GUI.Label(new Rect(0, 50, 300, 50), $"暂无房间");
+                GUI.Label(new Rect(GetXOffset + 0, 50, 300, 50), $"暂无房间");
             }
             else
             {
                 for(int i = 0; i < roomCount; i++)
                 {
-                    GUI.Label(new Rect(0, i * 50, 300, 50), $"ID: {roomList[i].updateRoomMemberList.roomId} userCount: {roomList[i].updateRoomMemberList.userList.Length}");
-                    if(GUI.Button(new Rect(400, i * 50, 100, 50), "加入"))
+                    GUI.Label(new Rect(GetXOffset + 200, i * 50, 300, 50), $"ID: {roomList[i].updateRoomMemberList.roomId} userCount: {roomList[i].updateRoomMemberList.userList.Length}");
+                    if(GUI.Button(new Rect(GetXOffset + 400, i * 50, 100, 50), "加入"))
                     {
                         // OnClickJoin(false, roomList[i].roomId, delay);
                         (var joinMessage, var joinShowInfo) = GetJoinMessage();
@@ -126,62 +109,62 @@ public class RoomGUI : MonoBehaviour
             GUI.color = Color.white;
         }
         
-        if(GUI.Button(new Rect(0, 150, 100, 50), "创建"))
+        if(GUI.Button(new Rect(GetXOffset + 0, 150, 100, 50), "创建"))
         {
             (var startMessage, var startShowInfo) = GetStartMessage();
 
             (var joinMessage, var joinShowInfo) = GetJoinMessage();
             
-            ClientBattleRoomMgr.Instance().CreateRoom(NetUtils.GetBytes(startMessage), NetUtils.GetBytes(startShowInfo), 
+            _clientBattleRoomMgr.CreateRoom(NetUtils.GetBytes(startMessage), NetUtils.GetBytes(startShowInfo), 
                 NetUtils.GetBytes(joinMessage), NetUtils.GetBytes(joinShowInfo));
         }
 
-        ip = GUI.TextField(new Rect(100, 150, 100, 50), ip);
-        if(_canQuery && GUI.Button(new Rect(200, 150, 100, 50), "查询房间"))
+        ip = GUI.TextField(new Rect(GetXOffset + 100, 150, 100, 50), ip);
+        if(GUI.Button(new Rect(GetXOffset + 200, 150, 100, 50), "查询房间"))
         {
-            QueryAvailableRooms();
+            _clientBattleRoomMgr.QueryRoomListAsync();
         }
 
 
         if( LocalServerMono.Instance != null && !LocalServerMono.Instance.isStartBattle)
         {
-            if(GUI.Button(new Rect(300, 150, 100, 50), "启用本地服务器"))
+            if(GUI.Button(new Rect(GetXOffset + 300, 150, 100, 50), "启用本地服务器"))
             {
                 LocalServerMono.Instance.StartServer();
                 ip = "127.0.0.1";
-                ClientBattleRoomMgr.Instance().ChangeIp(ip, 10055);
+                _clientBattleRoomMgr.ChangeIp(ip, 10055);
             }
-            // else if(GUI.Button(new Rect(400, 150, 100, 50), "MAC服务器"))
+            // else if(GUI.Button(new Rect(GetXOffset + 400, 150, 100, 50), "MAC服务器"))
             // {
             //     ip = _ipMac;
             // }
 
-            // else if(GUI.Button(new Rect(500, 150, 100, 50), "外网服务器"))
+            // else if(GUI.Button(new Rect(GetXOffset + 500, 150, 100, 50), "外网服务器"))
             // {
             //     ip = "106.75.214.130";
                 
             // }
-            if(ClientBattleRoomMgr.Instance().ServerUserState == GetUserStateMsg.UserState.HasRoom 
-                ||  ClientBattleRoomMgr.Instance().ServerUserState == GetUserStateMsg.UserState.HasBattle 
-                && GUI.Button(new Rect(700, 150, 100, 50), "战斗")) 
+            if(_clientBattleRoomMgr.ServerUserState == GetUserStateMsg.UserState.HasRoom 
+                ||  _clientBattleRoomMgr.ServerUserState == GetUserStateMsg.UserState.HasBattle 
+                && GUI.Button(new Rect(GetXOffset + 700, 150, 100, 50), "战斗")) 
             {
                 // OnClickReconnect();
-                ClientBattleRoomMgr.Instance().ReconnectToServer(TeamConnectParam.SyncInfo);
+                _clientBattleRoomMgr.ReconnectToServer(TeamConnectParam.SyncInfo);
             }
-            else if(GUI.Button(new Rect(800, 150, 100, 50), "检测状态")) 
+            else if(GUI.Button(new Rect(GetXOffset + 800, 150, 100, 50), "检测状态")) 
             {
-                ClientBattleRoomMgr.Instance().CheckRoomState();
+                _clientBattleRoomMgr.CheckRoomState();
             }
         }
         else
         {
-            GUI.Label(new Rect(300 , 150, 100, 50), "本地服务器已经开启");
+            GUI.Label(new Rect(GetXOffset + 300 , 150, 100, 50), "本地服务器已经开启");
         }
     }
 
     private async void JoinAsync(int roomId, byte[] bytes, byte[] showInfo)
     {
-        var ret = await ClientBattleRoomMgr.Instance().JoinRoom(roomId, bytes, showInfo);
+        var ret = await _clientBattleRoomMgr.JoinRoom(roomId, bytes, showInfo);
         if(ret != TeamRoomEnterFailedReason.OK)
         {
             Debug.LogError("join failed" + ret);
@@ -198,58 +181,51 @@ public class RoomGUI : MonoBehaviour
             for(int i = 0; i < _userList.Length; i++)
             {
                 int widthIndex = 0;
-                GUI.Label(new Rect((widthIndex++) * 100, i * 50 + 400, 100, 50), _userList[i].name);
-                GUI.Label(new Rect((widthIndex++) * 100, i * 50 + 400, 100, 50), $"{_userList[i].pen}");
-                GUI.Label(new Rect((widthIndex++) * 100, i * 50 + 400, 100, 50), _userList[i].userId.ToString());
-                GUI.Label(new Rect((widthIndex++) * 100, i * 50 + 400, 100, 50), $"在线：{_userList[i].isOnLine}");
-                GUI.Label(new Rect((widthIndex++) * 100, i * 50 + 400, 100, 50), $"准备：{_userList[i].isReady}");
+                GUI.Label(new Rect(GetXOffset + (widthIndex++) * 100, i * 50 + 400, 100, 50), _userList[i].name);
+                GUI.Label(new Rect(GetXOffset + (widthIndex++) * 100, i * 50 + 400, 100, 50), $"{_userList[i].pen}");
+                GUI.Label(new Rect(GetXOffset + (widthIndex++) * 100, i * 50 + 400, 100, 50), _userList[i].userId.ToString());
+                GUI.Label(new Rect(GetXOffset + (widthIndex++) * 100, i * 50 + 400, 100, 50), $"在线：{_userList[i].isOnLine}");
+                GUI.Label(new Rect(GetXOffset + (widthIndex++) * 100, i * 50 + 400, 100, 50), $"准备：{_userList[i].isReady}");
 
                 var isSelf = _userList[i].userId == userId;
                 var currentIsRoomMaster = i == 0;
                 if(isSelf)  // 自己的操作。
                 {
-                    if(GUI.Button(new Rect((widthIndex++) * 100, i * 50 + 400, 100, 50), "退出"))
+                    if(GUI.Button(new Rect(GetXOffset + (widthIndex++) * 100, i * 50 + 400, 100, 50), "退出"))
                     {
-                        ClientBattleRoomMgr.Instance().LeaveRoom();
+                        _clientBattleRoomMgr.LeaveRoom();
                     }
 
-                    if(GUI.Button(new Rect((widthIndex++) * 100, i * 50 + 400, 100, 50), "断线"))
+                    if(GUI.Button(new Rect(GetXOffset + (widthIndex++) * 100, i * 50 + 400, 100, 50), "断线"))
                     {
-                        ClientBattleRoomMgr.Instance().DEBUG_Disconnect();
+                        _clientBattleRoomMgr.DEBUG_Disconnect();
                     }
 
                     if(currentIsRoomMaster)
                     {
-                        if(iAmRoomMaster && GUI.Button(new Rect((widthIndex++) * 100, i * 50 + 400, 100, 50), "开始") )
+                        if(iAmRoomMaster && GUI.Button(new Rect(GetXOffset + (widthIndex++) * 100, i * 50 + 400, 100, 50), "开始") )
                         {
-                            ClientBattleRoomMgr.Instance().StartRoom();
+                            _clientBattleRoomMgr.StartRoom();
                         }
                     }
                     else
                     {
-                        if(GUI.Button(new Rect((widthIndex++) * 100, i * 50 + 400, 100, 50), $"ready：{_userList[i].isReady}"))
+                        if(GUI.Button(new Rect(GetXOffset + (widthIndex++) * 100, i * 50 + 400, 100, 50), $"ready：{_userList[i].isReady}"))
                         {
-                            ClientBattleRoomMgr.Instance().ReadyRoom(!_userList[i].isReady);
+                            _clientBattleRoomMgr.ReadyRoom(!_userList[i].isReady);
                         }
                     }
                 }
                 else if(iAmRoomMaster) // 群主对别人的操作。
                 {
-                    if(GUI.Button(new Rect((widthIndex++) * 100, i * 50 + 400, 100, 50), "踢出"))
+                    if(GUI.Button(new Rect(GetXOffset + (widthIndex++) * 100, i * 50 + 400, 100, 50), "踢出"))
                     {
-                        ClientBattleRoomMgr.Instance().KickUser((int)_userList[i].userId);
+                        _clientBattleRoomMgr.KickUser((int)_userList[i].userId);
                     }
                 }
             }
 
             GUI.color = Color.white;
         }
-    }
-
-    private async void QueryAvailableRooms()
-    {
-        _canQuery = false;
-        roomList = await ClientBattleRoomMgr.Instance().QueryRoomListAsync();
-        _canQuery = true;
     }
 }

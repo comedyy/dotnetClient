@@ -21,7 +21,7 @@ public abstract class LocalFrame
     protected MessageItem? _messageItem;
     protected int _controllerId = 0;
     public int ControllerId => _controllerId;
-    public static LocalFrame Instance;
+    static LocalFrame Instance;
     public bool IsPaused {get; protected set;}
     public bool BattleEnd{get;private set;}
     public bool Win{get;private set;}
